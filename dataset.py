@@ -338,17 +338,22 @@ class VQAFeatureDataset(Dataset):
         self.dictionary = dictionary
         self.adaptive = adaptive
 
-        self.img_id2idx = cPickle.load(
-            open(os.path.join(dataroot, '%s%s_imgid2idx.pkl' % (name, '' if self.adaptive else '36')), 'rb'))
-        
-        h5_path = os.path.join(dataroot, '%s%s.hdf5' % (name, '' if self.adaptive else '36'))
-
-        print('loading features from h5 file')    
-        with h5py.File(h5_path, 'r') as hf:
-            self.features = np.array(hf.get('image_features'))
-            self.spatials = np.array(hf.get('spatial_features'))
-            if self.adaptive:
-                self.pos_boxes = np.array(hf.get('pos_boxes'))
+        from collections import defaultdict
+        self.img_id2idx = defaultdict(int)
+        self.features = np.zeros((10,10), dtype=np.float32)
+        self.spatials = np.zeros((10, 10), dtype=np.float32)
+        self.pos_boxes = np.array([[0,1]])
+        # self.img_id2idx = cPickle.load(
+        #     open(os.path.join(dataroot, '%s%s_imgid2idx.pkl' % (name, '' if self.adaptive else '36')), 'rb'))
+        #
+        # h5_path = os.path.join(dataroot, '%s%s.hdf5' % (name, '' if self.adaptive else '36'))
+        #
+        # print('loading features from h5 file')
+        # with h5py.File(h5_path, 'r') as hf:
+        #     self.features = np.array(hf.get('image_features'))
+        #     self.spatials = np.array(hf.get('spatial_features'))
+        #     if self.adaptive:
+        #         self.pos_boxes = np.array(hf.get('pos_boxes'))
 
         self.entries = _load_dataset(dataroot, name, self.img_id2idx, self.label2ans)
         self.tokenize()
@@ -599,7 +604,7 @@ class Flickr30kFeatureDataset(Dataset):
 
 
 
-def tfidf_from_questions(names, dictionary, dataroot='data', target=['vqa', 'vg', 'cap', 'flickr']):
+def tfidf_from_questions(names, dictionary, dataroot='data', target=['vqa', 'vg', 'flickr']):
     inds = [[], []] # rows, cols for uncoalesce sparse matrix
     df = dict()
     N = len(dictionary)

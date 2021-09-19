@@ -14,6 +14,7 @@ import base_model
 import utils
 from utils import trim_collate
 from dataset import tfidf_from_questions
+import sys
 
 
 def parse_args():
@@ -76,7 +77,7 @@ if __name__ == '__main__':
 
     if args.tfidf:
         dict = Dictionary.load_from_file(dict_path)
-        tfidf, weights = tfidf_from_questions(['train', 'val', 'test2015'], dict)
+        tfidf, weights = tfidf_from_questions(['train', 'val', 'test2015'], dict, target=['vqa'])
 
     model.w_emb.init_embedding(w_emb_path, tfidf, weights)
 
@@ -94,6 +95,13 @@ if __name__ == '__main__':
         optim.load_state_dict(model_data.get('optimizer_state', model_data))
         epoch = model_data['epoch'] + 1
 
+    if sys.gettrace() is not None:
+        print('DEBUG!')
+        N_WORKERS = 0
+    else:
+        print('NOT DEBUG!')
+        N_WORKERS = 1
+
     if args.task == 'vqa':
         if args.use_both: # use train & val splits to optimize
             if args.use_vg: # use a portion of Visual Genome dataset
@@ -105,14 +113,14 @@ if __name__ == '__main__':
                 trainval_dset = ConcatDataset([train_dset, val_dset]+vg_dsets)
             else:
                 trainval_dset = ConcatDataset([train_dset, val_dset])
-            train_loader = DataLoader(trainval_dset, batch_size, shuffle=True, num_workers=1, collate_fn=utils.trim_collate)
+            train_loader = DataLoader(trainval_dset, batch_size, shuffle=True, num_workers=N_WORKERS, collate_fn=utils.trim_collate)
             eval_loader = None
         else:
-            train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=1, collate_fn=utils.trim_collate)
-            eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=1, collate_fn=utils.trim_collate)
+            train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=N_WORKERS, collate_fn=utils.trim_collate)
+            eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=N_WORKERS, collate_fn=utils.trim_collate)
 
     elif args.task == 'flickr':
-        train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=1, collate_fn=utils.trim_collate)
-        eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=1, collate_fn=utils.trim_collate)
+        train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=N_WORKERS, collate_fn=utils.trim_collate)
+        eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=N_WORKERS, collate_fn=utils.trim_collate)
 
     train(model, train_loader, eval_loader, args.epochs, args.output, optim, epoch)

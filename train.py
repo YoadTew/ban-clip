@@ -27,6 +27,17 @@ def compute_score_with_logits(logits, labels):
     scores = (one_hots * labels)
     return scores
 
+def compute_score_with_logits_topk(logits, labels):
+    K = 10
+    topk = logits.topk(K, dim=1)
+    one_hots = torch.zeros(*labels.size()).cuda()
+
+    for i in range(K):
+        one_hots.scatter_(1, topk[1][:,i:i+1], 1)
+
+    scores = (one_hots * labels).max(1, keepdim=True).values
+    return scores
+
 
 def train(model, train_loader, eval_loader, num_epochs, output, opt=None, s_epoch=0):
     lr_default = 1e-3 if eval_loader is not None else 7e-4
@@ -119,7 +130,7 @@ def evaluate(model, dataloader):
         b = b.cuda()
         q = q.cuda()
         pred, att = model(v, b, q, None)
-        batch_score = compute_score_with_logits(pred, a.cuda()).sum()
+        batch_score = compute_score_with_logits_topk(pred, a.cuda()).sum()
         score += batch_score.item()
         upper_bound += (a.max(1)[0]).sum().item()
         num_data += pred.size(0)

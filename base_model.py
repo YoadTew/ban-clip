@@ -46,23 +46,23 @@ class BanModel(nn.Module):
         """
         w_emb = self.w_emb(q)
         q_emb = self.q_emb.forward_all(w_emb) # [batch, q_len, q_dim]
-        boxes = b[:,:,:4].transpose(1,2)
-
-        b_emb = [0] * self.glimpse
-        att, logits = self.v_att.forward_all(v, q_emb) # b x g x v x q
-
-        for g in range(self.glimpse):
-            b_emb[g] = self.b_net[g].forward_with_weights(v, q_emb, att[:,g,:,:]) # b x l x h
-            
-            atten, _ = logits[:,g,:,:].max(2)
-            embed = self.counter(boxes, atten)
-
-            q_emb = self.q_prj[g](b_emb[g].unsqueeze(1)) + q_emb
-            q_emb = q_emb + self.c_prj[g](embed).unsqueeze(1)
+        # boxes = b[:,:,:4].transpose(1,2)
+        #
+        # b_emb = [0] * self.glimpse
+        # att, logits = self.v_att.forward_all(v, q_emb) # b x g x v x q
+        #
+        # for g in range(self.glimpse):
+        #     b_emb[g] = self.b_net[g].forward_with_weights(v, q_emb, att[:,g,:,:]) # b x l x h
+        #
+        #     atten, _ = logits[:,g,:,:].max(2)
+        #     embed = self.counter(boxes, atten)
+        #
+        #     q_emb = self.q_prj[g](b_emb[g].unsqueeze(1)) + q_emb
+        #     q_emb = q_emb + self.c_prj[g](embed).unsqueeze(1)
 
         logits = self.classifier(q_emb.sum(1))
 
-        return logits, att
+        return logits, None#att
 
 class BanModel_flickr(nn.Module):
     def __init__(self, w_emb, q_emb, v_att, op, glimpse):
@@ -104,7 +104,7 @@ class BanModel_flickr(nn.Module):
 
 def build_ban(dataset, num_hid, op='', gamma=4, task='vqa'):
     w_emb = WordEmbedding(dataset.dictionary.ntoken, 300, .0, op)
-    q_emb = QuestionEmbedding(300 if 'c' not in op else 600, num_hid, 1, False, .0)
+    q_emb = QuestionEmbedding(300 if 'c' not in op else 600, num_hid, 2, False, 0.1)
     v_att = BiAttention(dataset.v_dim, num_hid, num_hid, gamma)
     if task == 'vqa':
         b_net = []
